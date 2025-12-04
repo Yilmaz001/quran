@@ -1,0 +1,7 @@
+{
+  "name": "of Gebetszeiten AIR7",
+  "description": "Eine präzise Gebetszeiten-App für Deutschland und weltweit mit Moschee-Suche.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
