@@ -1,10 +1,12 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Mosque } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
-
 export const getMosquesInCity = async (city: string): Promise<Mosque[]> => {
   try {
+    // Initialize inside the function to ensure the latest key is used and to prevent
+    // immediate crash if process.env.API_KEY is undefined at module load.
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: `List 3 to 5 popular mosques in or near ${city}. If the city is small, list the nearest ones. Provide the output in German.`,
@@ -46,6 +48,9 @@ export const getMosquesInCity = async (city: string): Promise<Mosque[]> => {
 
 export const getDailyWisdom = async (): Promise<{ text: string; source: string } | null> => {
   try {
+    // Initialize inside the function
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+
     // Adding a random seed or parameter to the prompt to encourage variety
     const randomSeed = Math.floor(Math.random() * 1000);
     const response = await ai.models.generateContent({

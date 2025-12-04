@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, MapPin, Navigation, GripHorizontal, BookOpen } from 'lucide-react';
+import { Search, MapPin, Navigation, GripHorizontal, BookOpen, Key } from 'lucide-react';
 import Clock from './components/Clock';
 import PrayerTimesCard from './components/PrayerTimesCard';
 import MosqueList from './components/MosqueList';
@@ -12,6 +12,9 @@ import { getMosquesInCity } from './services/geminiService';
 import { PrayerData, Mosque } from './types';
 
 const App: React.FC = () => {
+  const [hasApiKey, setHasApiKey] = useState<boolean>(false);
+  const [checkingKey, setCheckingKey] = useState<boolean>(true);
+
   const [city, setCity] = useState<string>('Berlin');
   const [country, setCountry] = useState<string>('Germany'); // Default focus on Germany
   const [prayerData, setPrayerData] = useState<PrayerData | null>(null);
@@ -22,11 +25,48 @@ const App: React.FC = () => {
   const [showTasbih, setShowTasbih] = useState<boolean>(false);
   const [showQuran, setShowQuran] = useState<boolean>(false);
 
-  // Initial load
+  // Check for API Key on mount
   useEffect(() => {
-    fetchData(city, country);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const checkKey = async () => {
+      try {
+        if ((window as any).aistudio) {
+          const hasKey = await (window as any).aistudio.hasSelectedApiKey();
+          setHasApiKey(hasKey);
+        } else {
+          // Fallback if not running in AI Studio context, assume true or env var exists
+          setHasApiKey(true);
+        }
+      } catch (e) {
+        console.error("Error checking API key:", e);
+        setHasApiKey(false);
+      } finally {
+        setCheckingKey(false);
+      }
+    };
+    checkKey();
   }, []);
+
+  // Initial load of data once key is confirmed
+  useEffect(() => {
+    if (hasApiKey) {
+      fetchData(city, country);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasApiKey]);
+
+  const handleSelectKey = async () => {
+    try {
+      if ((window as any).aistudio) {
+        await (window as any).aistudio.openSelectKey();
+        // Assume success after dialog interaction as per race condition mitigation instruction
+        setHasApiKey(true);
+      }
+    } catch (e) {
+      console.error("Error selecting API key:", e);
+      // If failed, reset to force retry
+      setHasApiKey(false);
+    }
+  };
 
   const fetchData = async (searchCity: string, searchCountry: string) => {
     setLoading(true);
@@ -93,6 +133,44 @@ const App: React.FC = () => {
     }
   };
 
+  // Render API Key selection screen if no key
+  if (!checkingKey && !hasApiKey) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-4 text-center">
+        <div className="bg-slate-800 p-8 rounded-2xl border border-slate-700 shadow-2xl max-w-md w-full">
+          <div className="w-16 h-16 bg-amber-500/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
+            <Key className="w-8 h-8 text-amber-500" />
+          </div>
+          <h1 className="text-2xl font-bold text-slate-100 mb-2">API Key erforderlich</h1>
+          <p className="text-slate-400 mb-6 leading-relaxed">
+            Um die Moscheen-Suche und täglichen Weisheiten zu nutzen, wird ein API Key benötigt.
+          </p>
+          <button
+            onClick={handleSelectKey}
+            className="w-full bg-amber-600 hover:bg-amber-500 text-white font-semibold py-3 px-6 rounded-xl transition-colors mb-4 flex items-center justify-center gap-2"
+          >
+            <Key className="w-5 h-5" />
+            API Key auswählen
+          </button>
+          <a
+            href="https://ai.google.dev/gemini-api/docs/billing"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-slate-500 hover:text-amber-500 transition-colors underline"
+          >
+            Informationen zur Abrechnung
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  // Render checking state (optional, usually fast)
+  if (checkingKey) {
+    return <div className="min-h-screen bg-slate-900" />;
+  }
+
+  // Main App Content
   return (
     <div className="min-h-[100dvh] bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800 text-slate-100 flex flex-col pb-safe">
       
